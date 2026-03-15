@@ -15,7 +15,6 @@
 </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Detection\" />
     <Folder Include="Runtime\" />
   </ItemGroup>
 
