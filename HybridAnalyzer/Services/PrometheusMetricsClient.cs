@@ -7,9 +7,19 @@ internal sealed class PrometheusMetricsClient(HttpClient httpClient)
 {
     private readonly HttpClient _httpClient = httpClient;
 
+    private static Dictionary<string, string> _portToServiceMap = new()
+    {
+        ["5001"] = "inventory-service",
+        ["5002"] = "logger-service",
+        ["5003"] = "notification-service",
+        ["5004"] = "product-service",
+        ["5005"] = "recommendation-service",
+        ["5006"] = "search-service",
+    };
+
     public async Task<List<ServiceInteractionMetric>> GetRequestRatesAsync()
     {
-        string query = "rate(http_requests_total[1m])";
+        string query = "avg_over_time( sum by (service_name, server_port) ( rate(http_client_request_duration_seconds_count{server_port!=\"4317\"}[1m]) )[5m:])";
 
         string url = $"/api/v1/query?query={Uri.EscapeDataString(query)}";
 
@@ -26,14 +36,16 @@ internal sealed class PrometheusMetricsClient(HttpClient httpClient)
     }
 
     private static List<ServiceInteractionMetric> ParseMetrics(
-        PrometheusQueryResponse response)
+        PrometheusQueryResponse? response)
     {
         var metrics = new List<ServiceInteractionMetric>();
 
+        if (response is null) return metrics;
+
         foreach (var item in response.Data.Result)
         {
-            var source = item.Metric["source_service"];
-            var target = item.Metric["target_service"];
+            var source = item.Metric["service_name"];
+            var target = _portToServiceMap[item.Metric["server_port"]];
 
             double value = double.Parse((string)item.Value[1]);
 
