@@ -21,18 +21,24 @@ Neo4jConfig neo4jConfig = new();
 config.GetSection("Neo4J")
     .Bind(neo4jConfig);
 
-await StaticArchitectureAnalyzer.Detect(microServiceConfig, neo4jConfig);
+DetectionRule detectionRule = new();
+config.GetSection("DetectionRule")
+    .Bind(detectionRule);
+
+//await StaticArchitectureAnalyzer.Detect(microServiceConfig, neo4jConfig);
 
 var serviceDependencies = DependencyExtractor
         .ReadServiceDependencies(microServiceConfig);
 
 HttpClient client = new();
 
-var prometheusClient = new PrometheusMetricsClient(client);
+string prometheusBaseUri = "http://localhost:9090";
+
+var prometheusClient = new PrometheusMetricsClient(client, prometheusBaseUri);
 
 var metrics = await prometheusClient.GetRequestRatesAsync();
 
-var detector = new HybridSmellDetector();
+var detector = new HybridSmellDetector(detectionRule);
 
 var chattyServices = detector.DetectChattyServices(serviceDependencies, metrics);
 
@@ -41,6 +47,15 @@ WriteLine("Chatty services:");
 foreach (var service in chattyServices)
 {
     WriteLine(service);
+}
+
+var cyclicDeps = detector.DetectOperationalCycles(serviceDependencies, metrics);
+
+WriteLine("Cyclic deps: ");
+
+foreach(var (a,b) in cyclicDeps)
+{
+    WriteLine($"Dependency exists between services: {a} {b}");
 }
 
 

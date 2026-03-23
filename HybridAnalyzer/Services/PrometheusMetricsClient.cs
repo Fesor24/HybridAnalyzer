@@ -3,9 +3,15 @@ using HybridAnalyzer.Models;
 
 namespace HybridAnalyzer.Services;
 
-internal sealed class PrometheusMetricsClient(HttpClient httpClient)
+internal sealed class PrometheusMetricsClient
 {
-    private readonly HttpClient _httpClient = httpClient;
+    private readonly HttpClient _httpClient;
+
+    public PrometheusMetricsClient(HttpClient httpClient, string prometheusBaseUri)
+    {
+        _httpClient = httpClient;
+        _httpClient.BaseAddress = new Uri(prometheusBaseUri);
+    }
 
     private static Dictionary<string, string> _portToServiceMap = new()
     {
@@ -19,7 +25,7 @@ internal sealed class PrometheusMetricsClient(HttpClient httpClient)
 
     public async Task<List<ServiceInteractionMetric>> GetRequestRatesAsync()
     {
-        string query = "avg_over_time( sum by (service_name, server_port) ( rate(http_client_request_duration_seconds_count{server_port!=\"4317\"}[1m]) )[5m:])";
+        string query = "avg_over_time( sum by (service_name, server_port) ( increase(http_client_request_duration_seconds_count{server_port!=\"4317\"}[1m]) )[5m:])";
 
         string url = $"/api/v1/query?query={Uri.EscapeDataString(query)}";
 
@@ -45,14 +51,21 @@ internal sealed class PrometheusMetricsClient(HttpClient httpClient)
         foreach (var item in response.Data.Result)
         {
             var source = item.Metric["service_name"];
-            var target = _portToServiceMap[item.Metric["server_port"]];
 
-            double value = double.Parse((string)item.Value[1]);
+            bool portExist = _portToServiceMap
+                .TryGetValue(item.Metric["server_port"], out var targetService);
+
+            // In this case not a service port
+            if (!portExist) continue;
+
+            JsonElement metricVal = (JsonElement)(item.Value[1]);
+
+            double value = double.Parse(metricVal.GetString() ?? "0");
 
             metrics.Add(new ServiceInteractionMetric
             (
                 source.ToLower(),
-                target.ToLower(),
+                targetService!.ToLower(),
                 value
             ));
         }
