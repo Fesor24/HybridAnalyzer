@@ -55,7 +55,7 @@ async Task Detect()
 
     var prometheusClient = new PrometheusMetricsClient(client, prometheusBaseUri);
 
-    var metrics = await prometheusClient.GetRequestRatesAsync();
+    var metrics = await prometheusClient.GetRequestCountsAsync();
 
     var detector = new HybridSmellDetector(detectionRule);
 

@@ -23,9 +23,9 @@ internal sealed class PrometheusMetricsClient
         ["5006"] = "search-service",
     };
 
-    public async Task<List<ServiceInteractionMetric>> GetRequestRatesAsync()
+    public async Task<List<ServiceInteractionMetric>> GetRequestCountsAsync()
     {
-        string query = "avg_over_time( sum by (service_name, server_port) ( increase(http_client_request_duration_seconds_count{server_port!=\"4317\"}[1m]) )[5m:])";
+        string query = "sum by (service_name, server_port) (\r\n  increase(http_client_request_duration_seconds_count{server_port!=\"4317\"}[1m])\r\n)";
 
         string url = $"/api/v1/query?query={Uri.EscapeDataString(query)}";
 
