@@ -65,21 +65,16 @@ internal sealed class HybridSmellDetector(DetectionRule detectionRule)
         return confirmedCycles.ToList();
     }
 
-    // TODO: Don't include operational significance so rate threshold not valid for cycle
-    // Valid for chatty services not cylce
-    // leave cycle to a mere existence...
-    private bool ConfirmCycle(string serviceA, string serviceB,
+    private static bool ConfirmCycle(string serviceA, string serviceB,
      List<ServiceInteractionMetric> metrics)
     {
         bool aToB = metrics.Any(m =>
             m.SourceService == serviceA &&
-            m.TargetService == serviceB &&
-            m.RequestRate > detectionRule.RateThreshold);
+            m.TargetService == serviceB);
 
         bool bToA = metrics.Any(m =>
             m.SourceService == serviceB &&
-            m.TargetService == serviceA &&
-            m.RequestRate > detectionRule.RateThreshold); // detect significant cycles
+            m.TargetService == serviceA);
 
         return aToB && bToA;
     }

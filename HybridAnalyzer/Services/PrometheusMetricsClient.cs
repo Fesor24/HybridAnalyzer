@@ -64,8 +64,8 @@ internal sealed class PrometheusMetricsClient
 
             metrics.Add(new ServiceInteractionMetric
             (
-                source.ToLower(),
-                targetService!.ToLower(),
+                source.ToLower().Replace("-", ""),
+                targetService!.ToLower().Replace("-", ""),
                 value
             ));
         }

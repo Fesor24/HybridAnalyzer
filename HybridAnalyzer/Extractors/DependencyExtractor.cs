@@ -19,13 +19,13 @@ internal sealed class DependencyExtractor
             .Select(s => s.ToLower())
             .ToList();
 
-        Console.WriteLine("Discovered services:");
-        foreach (var s in services)
-        {
-            Console.WriteLine($" - {s}");
-        }
+        //Console.WriteLine("Discovered services:");
+        //foreach (var s in services)
+        //{
+        //    Console.WriteLine($" - {s}");
+        //}
 
-        Console.WriteLine("\nDeclared dependencies:\n");
+        //Console.WriteLine("\nDeclared dependencies:\n");
 
         // Regex to detect URLs
         var urlRegex = new Regex(@"https?:\/\/([a-zA-Z0-9\-\.]+)",
@@ -82,20 +82,20 @@ internal sealed class DependencyExtractor
 
             serviceDependencies.Add(serviceDependency);
 
-            Console.WriteLine($"{serviceName}");
+            //Console.WriteLine($"{serviceName}");
 
-            if (dependencies.Count == 0)
-            {
-                Console.WriteLine("   No declared dependencies\n");
-                continue;
-            }
+            //if (dependencies.Count == 0)
+            //{
+            //    Console.WriteLine("   No declared dependencies\n");
+            //    continue;
+            //}
 
-            foreach (var dep in dependencies)
-            {
-                Console.WriteLine($"   -> {dep}");
-            }
+            //foreach (var dep in dependencies)
+            //{
+            //    Console.WriteLine($"   -> {dep}");
+            //}
 
-            Console.WriteLine();
+            //Console.WriteLine();
         }
 
         return serviceDependencies;

@@ -1,7 +1,7 @@
-﻿using HybridAnalyzer.Analyzers;
-using HybridAnalyzer.Config;
+﻿using HybridAnalyzer.Config;
 using HybridAnalyzer.Detection;
 using HybridAnalyzer.Extractors;
+using HybridAnalyzer.Graph;
 using HybridAnalyzer.Services;
 using Microsoft.Extensions.Configuration;
 using static System.Console;
@@ -25,39 +25,63 @@ DetectionRule detectionRule = new();
 config.GetSection("DetectionRule")
     .Bind(detectionRule);
 
-//await StaticArchitectureAnalyzer.Detect(microServiceConfig, neo4jConfig);
-
 var serviceDependencies = DependencyExtractor
         .ReadServiceDependencies(microServiceConfig);
 
-HttpClient client = new();
+Neo4jRepository graphRepository = new(neo4jConfig);
 
-string prometheusBaseUri = "http://localhost:9090";
+WriteLine("Press 'Y' to start detection");
 
-var prometheusClient = new PrometheusMetricsClient(client, prometheusBaseUri);
+string userInput = ReadLine();
 
-var metrics = await prometheusClient.GetRequestRatesAsync();
-
-var detector = new HybridSmellDetector(detectionRule);
-
-var chattyServices = detector.DetectChattyServices(serviceDependencies, metrics);
-
-WriteLine("Chatty services:");
-
-foreach (var service in chattyServices)
+while(userInput != null && 
+    userInput.Equals("Y", StringComparison.CurrentCultureIgnoreCase))
 {
-    WriteLine(service);
-}
+    await graphRepository.ClearGraphAsync();
 
-var cyclicDeps = detector.DetectOperationalCycles(serviceDependencies, metrics);
+    await Detect();
 
-WriteLine("Cyclic deps: ");
+    WriteLine("Press 'Y' to start detection");
 
-foreach(var (a,b) in cyclicDeps)
-{
-    WriteLine($"Dependency exists between services: {a} {b}");
+    userInput = ReadLine();
 }
 
 
+async Task Detect()
+{
+    HttpClient client = new();
 
-Read();
+    string prometheusBaseUri = "http://localhost:9090";
+
+    var prometheusClient = new PrometheusMetricsClient(client, prometheusBaseUri);
+
+    var metrics = await prometheusClient.GetRequestRatesAsync();
+
+    var detector = new HybridSmellDetector(detectionRule);
+
+    var chattyServices = detector.DetectChattyServices(serviceDependencies, metrics);
+
+    await graphRepository.WriteServicesAsync(chattyServices);
+
+    //WriteLine("Chatty services:");
+
+    //foreach (var service in chattyServices)
+    //{
+    //    WriteLine(service);
+    //}
+
+    var cyclicDeps = detector.DetectOperationalCycles(serviceDependencies, metrics);
+
+    if(cyclicDeps.Count > 0)
+        await graphRepository.WriteMutualDependenciesAsync(cyclicDeps);
+
+    //WriteLine("Cyclic deps: ");
+
+    //foreach (var (a, b) in cyclicDeps)
+    //{
+    //    WriteLine($"Dependency exists between services: {a} and {b}");
+    //}
+}
+
+
+

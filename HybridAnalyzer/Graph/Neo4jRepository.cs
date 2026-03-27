@@ -31,28 +31,43 @@ internal class Neo4jRepository
         });
     }
 
-    public async Task WriteDependenciesAsync(List<ServiceDependency> dependencies)
+    public async Task WriteMutualDependenciesAsync(List<(string A, string B)> dependencies)
     {
         await using var session = GetSession();
 
-        foreach (var service in dependencies)
+        foreach (var (a, b) in dependencies)
         {
-            foreach (var dependency in service.Dependencies)
-            {
-                var query = @"
-                MERGE (s:Service {name:$service})
-                MERGE (d:Service {name:$dependency})
-                MERGE (s)-[:DEPENDS_ON]->(d)";
+            var query = @"
+            MERGE (nodeA:Service {name:$a})
+            MERGE (nodeB:Service {name:$b})
+            MERGE (nodeA)-[:DEPENDS_ON]->(nodeB)
+            MERGE (nodeB)-[:DEPENDS_ON]->(nodeA)";
 
-                await session.ExecuteWriteAsync(async tx =>
+            await session.ExecuteWriteAsync(async tx =>
+            {
+                await tx.RunAsync(query, new
                 {
-                    await tx.RunAsync(query, new
-                    {
-                        service = service.ServiceName,
-                        dependency
-                    });
+                    a,
+                    b
                 });
-            }
+            });
+        }
+    }
+
+    public async Task WriteServicesAsync(List<string> services)
+    {
+        await using var session = GetSession();
+
+        foreach (var service in services)
+        {
+            var query = @"
+            MERGE (s:Service {name:$serviceName})
+            SET s.source = 'chatty'"; // mark nodes as chatty services
+
+            await session.ExecuteWriteAsync(async tx =>
+            {
+                await tx.RunAsync(query, new { serviceName = service });
+            });
         }
     }
 
