@@ -20,17 +20,17 @@ internal sealed class HybridSmellDetector(DetectionRule detectionRule)
                 .Distinct()
                 .Count();
 
-            // Structural chatty
-            if (staticFanOut >= detectionRule.FanOutThreshold || 
+            // Structural chatty combined with dynamic
+            if (staticFanOut >= detectionRule.FanOutThreshold &&
                 dynamicFanOut >= detectionRule.FanOutThreshold)
                 chattyServices.Add(service.ServiceName);
 
             // Behavioural chatty
-            double totalRequestRate = metrics
-                .Where(m => m.SourceService == service.ServiceName) // TODO: Confirm if name tallies here
-                .Sum(m => m.RequestRate);
+            double requestCount = metrics
+                .Where(m => m.SourceService == service.ServiceName)
+                .Sum(m => m.RequestCount);
 
-            if (totalRequestRate > detectionRule.RateThreshold)
+            if (requestCount > detectionRule.RequestCountThreshold)
                 chattyServices.Add(service.ServiceName);
         }
 

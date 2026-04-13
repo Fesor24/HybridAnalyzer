@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using System.Text.RegularExpressions;
-using HybridAnalyzer.Config;
 using HybridAnalyzer.Extensions;
 using HybridAnalyzer.Models;
 
@@ -8,24 +7,16 @@ namespace HybridAnalyzer.Extractors;
 
 internal sealed class DependencyExtractor
 {
-    public static List<ServiceDependency> ReadServiceDependencies(MicroServiceConfig config)
+    public static List<ServiceDependency> ReadServiceDependencies(string microServiceRootDirectory)
     {
         // Get the directories (the service folders)
-        var serviceDirectories = Directory.GetDirectories(config.RootDirectory);
+        var serviceDirectories = Directory.GetDirectories(microServiceRootDirectory);
 
         // Get the file names from the service directories
         var services = serviceDirectories
             .Select(Path.GetFileName)
             .Select(s => s.ToLower())
             .ToList();
-
-        //Console.WriteLine("Discovered services:");
-        //foreach (var s in services)
-        //{
-        //    Console.WriteLine($" - {s}");
-        //}
-
-        //Console.WriteLine("\nDeclared dependencies:\n");
 
         // Regex to detect URLs
         var urlRegex = new Regex(@"https?:\/\/([a-zA-Z0-9\-\.]+)",
@@ -44,16 +35,12 @@ internal sealed class DependencyExtractor
             // Set the path for the appsettings for the respective service
             var configPath = Path.Combine(folder, "appsettings.json");
 
-            //Console.WriteLine(configPath);
-
             // If the file does not exist, we continue iteration
             if (!File.Exists(configPath))
                 continue;
 
             // Read the contents of appsettings
             var json = File.ReadAllText(configPath);
-
-            //Console.WriteLine(json);
 
             // Parse the json document
             using var document = JsonDocument.Parse(json);
@@ -81,21 +68,6 @@ internal sealed class DependencyExtractor
             }
 
             serviceDependencies.Add(serviceDependency);
-
-            //Console.WriteLine($"{serviceName}");
-
-            //if (dependencies.Count == 0)
-            //{
-            //    Console.WriteLine("   No declared dependencies\n");
-            //    continue;
-            //}
-
-            //foreach (var dep in dependencies)
-            //{
-            //    Console.WriteLine($"   -> {dep}");
-            //}
-
-            //Console.WriteLine();
         }
 
         return serviceDependencies;

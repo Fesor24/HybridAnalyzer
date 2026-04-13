@@ -11,11 +11,6 @@ IConfigurationBuilder builder = new ConfigurationBuilder()
 
 IConfigurationRoot config = builder.Build();
 
-MicroServiceConfig microServiceConfig = new();
-
-config.GetSection("MicroServicesConfig")
-    .Bind(microServiceConfig);
-
 Neo4jConfig neo4jConfig = new();
 
 config.GetSection("Neo4J")
@@ -25,10 +20,15 @@ DetectionRule detectionRule = new();
 config.GetSection("DetectionRule")
     .Bind(detectionRule);
 
+string microServicesRootDirectory = config.GetSection("MicroServicesRootDirectory").Get<string>() ?? "";
+
 var serviceDependencies = DependencyExtractor
-        .ReadServiceDependencies(microServiceConfig);
+        .ReadServiceDependencies(microServicesRootDirectory);
 
 Neo4jRepository graphRepository = new(neo4jConfig);
+
+Dictionary<string, string> portToServiceMap = config
+    .GetSection("PortToServiceMap").Get<Dictionary<string, string>>() ?? [];
 
 WriteLine("Press 'Y' to start detection");
 
@@ -37,12 +37,14 @@ string userInput = ReadLine();
 while(userInput != null && 
     userInput.Equals("Y", StringComparison.CurrentCultureIgnoreCase))
 {
+    WriteLine("Detecting...");
+
     await graphRepository.ClearGraphAsync();
 
     await Detect();
 
-    WriteLine("Press 'Y' to start detection");
-
+    WriteLine("Detection complete. Press 'Y' to start new detection");
+    
     userInput = ReadLine();
 }
 
@@ -51,9 +53,9 @@ async Task Detect()
 {
     HttpClient client = new();
 
-    string prometheusBaseUri = "http://localhost:9090";
+    string prometheusBaseUri = config.GetSection("PrometheusUri").Get<string>() ?? "";
 
-    var prometheusClient = new PrometheusMetricsClient(client, prometheusBaseUri);
+    var prometheusClient = new PrometheusMetricsClient(client, prometheusBaseUri, portToServiceMap);
 
     var metrics = await prometheusClient.GetRequestCountsAsync();
 
@@ -63,24 +65,10 @@ async Task Detect()
 
     await graphRepository.WriteServicesAsync(chattyServices);
 
-    //WriteLine("Chatty services:");
-
-    //foreach (var service in chattyServices)
-    //{
-    //    WriteLine(service);
-    //}
-
     var cyclicDeps = detector.DetectOperationalCycles(serviceDependencies, metrics);
 
-    if(cyclicDeps.Count > 0)
+    if(cyclicDeps.Count > detectionRule.CycleRateThreshold)
         await graphRepository.WriteMutualDependenciesAsync(cyclicDeps);
-
-    //WriteLine("Cyclic deps: ");
-
-    //foreach (var (a, b) in cyclicDeps)
-    //{
-    //    WriteLine($"Dependency exists between services: {a} and {b}");
-    //}
 }
 
 

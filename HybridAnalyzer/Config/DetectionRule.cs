@@ -4,5 +4,5 @@ internal class DetectionRule
 {
     public int FanOutThreshold {  get; set; }
     public int CycleRateThreshold { get; set; }
-    public int RateThreshold { get; set; }
+    public double RequestCountThreshold { get; set; }
 }

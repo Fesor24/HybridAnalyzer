@@ -3,5 +3,5 @@
 internal sealed record ServiceInteractionMetric(
     string SourceService,
     string TargetService,
-    double RequestRate
+    double RequestCount
     );
