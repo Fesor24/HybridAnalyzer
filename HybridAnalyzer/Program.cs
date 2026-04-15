@@ -67,7 +67,7 @@ async Task Detect()
 
     var cyclicDeps = detector.DetectOperationalCycles(serviceDependencies, metrics);
 
-    if(cyclicDeps.Count > detectionRule.CycleRateThreshold)
+    if(cyclicDeps.Count >= detectionRule.CycleRateThreshold)
         await graphRepository.WriteMutualDependenciesAsync(cyclicDeps);
 }
 

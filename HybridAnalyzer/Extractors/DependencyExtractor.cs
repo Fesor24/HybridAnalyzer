@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.RegularExpressions;
-using HybridAnalyzer.Extensions;
 using HybridAnalyzer.Models;
+using HybridAnalyzer.Utils;
 
 namespace HybridAnalyzer.Extractors;
 
@@ -52,11 +52,11 @@ internal sealed class DependencyExtractor
 
             foreach (var (key, value) in keyValues)
             {
-                var normalizedKey = string.CustomNormalize(key);
+                var normalizedKey = string.TrimAndToLower(key);
 
                 foreach (var knownService in services)
                 {
-                    var normalizedService = string.CustomNormalize(knownService);
+                    var normalizedService = string.TrimAndToLower(knownService);
 
                     if (normalizedKey.Contains(normalizedService) &&
                         knownService != serviceName)
